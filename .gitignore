@@ -1,0 +1,40 @@
+# ROS build artifacts
+build/
+devel/
+install/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Compiled object files
+*.o
+*.so
+*.a
+
+# ROS bag files (large binaries)
+*.bag
+*.active
+
+# Model weights (download separately, see model/README.md)
+*.pt
+
+# Backup archives
+*.zip
+*.tar.gz
+*.rar

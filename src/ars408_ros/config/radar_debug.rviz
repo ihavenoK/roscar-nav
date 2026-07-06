@@ -1,0 +1,87 @@
+Panels:
+  - Class: rviz/Displays
+    Name: Displays
+  - Class: rviz/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Alpha: 0.8
+      Class: rviz/Grid
+      Color: 125;125;125
+      Enabled: true
+      Name: Grid
+      Plane: XY
+      Plane Cell Count: 50
+      Reference Frame: base_link
+      Value: true
+    - Alpha: 1
+      Class: rviz/MarkerArray
+      Enabled: true
+      Name: Radar Targets
+      Namespaces:
+        radar: true
+      Topic: /radar/targets
+      Value: true
+    - Alpha: 1
+      Class: rviz/PointCloud2
+      Color: 255;0;0
+      Color Transformer: FlatColor
+      Decay Time: 0.3
+      Enabled: true
+      Name: Radar PointCloud
+      Position Transformer: XYZ
+      Size (Pixels): 3
+      Size (m): 0.1
+      Style: Points
+      Topic: /radar/pointcloud
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /fusion/printpoint
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Fusion Result (BBox+Dist)
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Value: true
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /fusion/scatter_canvas
+      Name: Radar Scatter
+      Queue Size: 2
+      Value: true
+    - Alpha: 1
+      Class: rviz/MarkerArray
+      Enabled: true
+      Name: Person Radar
+      Topic: /fusion/person_radar_markers
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 48;48;48
+    Fixed Frame: base_link
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/Measure
+  Value: true
+  Views:
+    Current:
+      Class: rviz/TopDownOrtho
+      Name: Current View
+      Near Clip Distance: 0.01
+      Scale: 10
+      Target Frame: base_link
+      Value: TopDownOrtho (rviz)
+      X: 0
+      Y: 0
+    Saved: ~
+Window Geometry:
+  Height: 600
+  Width: 1000

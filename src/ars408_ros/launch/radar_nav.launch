@@ -1,0 +1,54 @@
+<launch>
+  <!-- ========================================================== -->
+  <!--  雷达行人检测 + 多点导航（真车）                            -->
+  <!-- ========================================================== -->
+
+  <arg name="map_file" default="/home/gdut/map/my_map.yaml"/>
+
+  <!-- 1. 真车底层 + 地图 + AMCL + move_base -->
+  <include file="$(find start_roscar)/launch/navigation.launch">
+    <arg name="map_file" value="$(arg map_file)"/>
+  </include>
+
+  <!-- 2. TF 发布 (radar_link, camera_link) -->
+  <node pkg="ars408_ros" type="tf_publisher.py" name="tf_publisher" output="screen"/>
+
+  <!-- 3. CAN转ROS桥接（必须！ars408_node依赖此节点） -->
+  <node pkg="socketcan_bridge" type="socketcan_bridge_node"
+        name="socketcan_bridge" output="screen">
+    <param name="can_device" value="can0"/>
+  </node>
+
+  <!-- 4. ARS408 毫米波雷达解析 -->
+  <node pkg="ars408_ros" type="ars408_node.py"
+        name="ars408_node" output="screen"/>
+
+  <!-- 5. YOLO 行人检测 — 已移除 -->
+  <!-- 现由 multi_nav_traffic_light_node 在 NAVIGATING 状态下接管
+       (动态模型切换: yolov8n.pt ↔ best_new.pt)
+       发布 /yolo/person_detections 话题供 fusion_person_detect 订阅 -->
+
+  <!-- 6. 雷达 + YOLO 融合（障碍物点云 → costmap 自动避障） -->
+  <node pkg="ars408_ros" type="fusion_person_detect.py"
+        name="person_detect_fusion" output="screen">
+    <param name="fx" value="550.0"/>
+    <param name="fy" value="550.0"/>
+    <param name="cx" value="320.0"/>
+    <param name="cy" value="240.0"/>
+    <param name="conf_min"         value="0.15"/>
+    <param name="max_time_diff"    value="0.5"/>
+    <param name="cluster_radius"   value="0.4"/>    <!-- 40cm 障碍物聚类圆 -->
+    <param name="min_radar_points" value="1"/>      <!-- bbox内至少1个雷达点即触发（行人RCS低） -->
+    <param name="obstacle_lifetime" value="3.0"/>   <!-- costmap 保留时长，加长到3.0s防止闪烁 -->
+    <!-- C2: 近距离自适应保持 —— 越近保持越久，防止近距离YOLO漏检导致障碍物消失 -->
+    <param name="near_hold_dist"       value="1.5"/>  <!-- 触发近距离保持的距离阈值(m) -->
+    <param name="near_max_miss_frames" value="50"/>   <!-- 近距离保持帧数(5s@10Hz) -->
+  </node>
+
+  <!-- 7. pedestrian_to_scan — 已移除 -->
+  <!-- 现由 fusion_person_detect 直接发布 /person_obstacle_cloud (PointCloud2)
+       costmap obstacle_layer 原生支持 PointCloud2，无需转 LaserScan -->
+
+  <!-- 8. 多点导航节点 — 由 nav.launch 统一启动, 此处不再启动 -->
+
+</launch>

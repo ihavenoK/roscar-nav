@@ -1,0 +1,98 @@
+<launch>
+  <!-- ============================================================ -->
+  <!-- 视觉特征约束下的 gmapping 建图 一键启动                        -->
+  <!-- 注意: 本 launch 已包含 start_roscar.launch (底盘+雷达+摄像头)  -->
+  <!--       因此只需执行本 launch 即可, 切勿再单独启动 start_roscar   -->
+  <!-- ============================================================ -->
+
+  <!-- 可选参数 -->
+  <arg name="use_rviz"            default="true"/>
+  <arg name="use_visual_follower" default="true"/>
+  <!-- 方向反转 (调试用): 转向反了设 true, 前后反了设 true -->
+  <arg name="reverse_steering"    default="false"/>
+  <arg name="reverse_linear"      default="false"/>
+
+  <!-- 1️⃣ 启动底盘与传感器 (STM32 / TF / EKF / RPLidar / usb_cam) -->
+  <include file="$(find start_roscar)/launch/start_roscar.launch"/>
+
+  <!-- 2️⃣ gmapping 建图节点 -->
+  <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+    <param name="base_frame" value="base_footprint"/>
+    <param name="odom_frame" value="odom_combined"/>
+    <param name="map_frame"  value="map"/>
+
+    <remap from="scan" to="/scan"/>
+
+    <!-- 扫描降频 -->
+    <param name="throttle_scans" value="1"/>
+
+    <!-- ===== 激光数据有效性 ===== -->
+    <!-- A3 量程 16m, 但远点噪声大, 仅用近距有效点提高稳定性 -->
+    <param name="maxUrange" value="6.0"/>
+    <param name="maxRange"  value="8.0"/>
+    <!-- 扫描匹配阈值, 低于此分不更新地图, 防止错位/重影 -->
+    <param name="minimumScore" value="100.0"/>
+
+    <!-- ===== 扫描匹配参数 ===== -->
+    <param name="sigma" value="0.05"/>
+    <param name="kernelSize" value="1"/>
+    <param name="lstep" value="0.05"/>
+    <param name="astep" value="0.05"/>
+    <param name="iterations" value="5"/>
+
+    <!-- ===== 更新频率: 降频防 CPU 过载丢帧 ===== -->
+    <param name="linearUpdate"  value="0.5"/>
+    <param name="angularUpdate" value="0.2"/>
+    <param name="temporalUpdate" value="2.0"/>
+    <param name="map_update_interval" value="2.0"/>
+
+    <!-- ===== 粒子数: 中小场地 30 足够, 复杂场景可加到 80 ===== -->
+    <param name="particles" value="40"/>
+
+    <!-- ===== 里程计误差模型 (解决漂移/变形的关键) ===== -->
+    <!-- srr: 旋转->旋转, str: 平移->旋转, srt: 旋转->平移, stt: 平移->平移 -->
+    <!-- 差速底盘初始值, 标定后微调: 原地打转地图抖动降 srr, 直行墙弯降 str -->
+    <param name="srr" value="0.05"/>
+    <param name="srt" value="0.05"/>
+    <param name="str" value="0.05"/>
+    <param name="stt" value="0.05"/>
+
+    <!-- ===== 地图初始边界 (按场地预估, 防止边缘抖动扩张) ===== -->
+    <param name="xmin" value="-10.0"/>
+    <param name="ymin" value="-10.0"/>
+    <param name="xmax" value="10.0"/>
+    <param name="ymax" value="10.0"/>
+  </node>
+
+  <!-- 3️⃣ 视觉循迹节点: 沿黑线行驶, 为建图提供直线约束 -->
+  <node pkg="ele_line_follower"
+        type="visual_line_follower.py"
+        name="visual_line_follower"
+        output="screen"
+        if="$(arg use_visual_follower)">
+    <!-- 速度 / PID -->
+    <param name="v_forward"   value="0.12"/>
+    <param name="v_lost"      value="0.05"/>
+    <param name="Kp"          value="1.2"/>
+    <param name="Kd"          value="0.3"/>
+    <param name="omega_max"   value="0.8"/>
+    <!-- 自适应速度 (视觉约束核心): 弯道减速防止冲线 -->
+    <param name="v_min_ratio" value="0.4"/>
+    <param name="k_curve"     value="1.0"/>
+    <!-- 丢线超时停车 -->
+    <param name="lost_timeout" value="1.5"/>
+    <!-- 方向反转 -->
+    <param name="reverse_steering" value="$(arg reverse_steering)"/>
+    <param name="reverse_linear"   value="$(arg reverse_linear)"/>
+    <!-- 黑线检测 -->
+    <param name="roi_y_ratio" value="0.5"/>
+    <param name="v_thresh"    value="80"/>
+    <param name="min_pixel"   value="50"/>
+  </node>
+
+  <!-- 4️⃣ RViz 可视化 (地图 + 雷达 + 摄像头 + 循迹调试画面) -->
+  <node pkg="rviz" type="rviz" name="rviz"
+        args="-d $(find roscar_slam)/rviz/visual_slam.rviz"
+        output="screen"
+        if="$(arg use_rviz)"/>
+</launch>

@@ -1,0 +1,70 @@
+<launch>
+  <!-- ========================================================== -->
+  <!--  真车多点导航 + 动态模型切换                                -->
+  <!--                                                            -->
+  <!--  架构 (解决双YOLO算力冲突):                                -->
+  <!--    NAVIGATING:      yolov8n.pt → 行人检测 → 雷达融合避障    -->
+  <!--    单数WP到达:      停车 → 切 best_new.pt (~5s)            -->
+  <!--    RED_LIGHT_CHECK: 检测绿灯 → 切回 yolov8n.pt (~5s)       -->
+  <!--    继续下一个WP                                              -->
+  <!--                                                            -->
+  <!--  WP规则: 单数(1,3,5...)=红绿灯检查点, 双数=普通导航点       -->
+  <!--  依赖: start_roscar + map_server + AMCL + move_base         -->
+  <!--        + ars408_ros (雷达+融合)                             -->
+  <!-- ========================================================== -->
+
+  <!-- 地图文件参数，可传参覆盖，如 map_file:=/home/gdut/map/manual_map.yaml -->
+  <arg name="map_file" default="/home/gdut/map/my_map.yaml"/>
+
+  <!-- 1. 雷达行人检测全套 (navigation + socketcan + ars408 + fusion) -->
+  <!--    radar_nav.launch 内部已 include navigation.launch，此处不重复 -->
+  <include file="$(find ars408_ros)/launch/radar_nav.launch">
+    <arg name="map_file" value="$(arg map_file)"/>
+  </include>
+
+  <!-- 2. 多点导航 + 动态模型切换 -->
+  <node pkg="multi_nav_traffic" type="multi_nav_traffic_light_node.py"
+        name="multi_nav_traffic_light" output="screen">
+
+    <!-- ARM64: 修复 PyTorch 导入时的 TLS 内存分配错误 -->
+    <env name="LD_PRELOAD" value="/usr/lib/aarch64-linux-gnu/libgomp.so.1"/>
+
+    <!-- ★ 双模型路径 -->
+    <param name="person_model_path" value="/home/gdut/yolov8n.pt"/>
+    <param name="tl_model_path"     value="$(find multi_nav_traffic)/model/best_new.pt"/>
+
+    <!-- 图像处理 -->
+    <param name="gamma"      value="1.5"/>
+    <param name="show_detection_window" value="false"/>
+
+    <!-- TF帧 -->
+    <param name="camera_frame" value="camera_link"/>
+    <param name="laser_frame"  value="laser"/>
+    <param name="robot_frame"  value="base_footprint"/>
+
+    <!-- 红绿灯检测参数 -->
+    <param name="tl_conf_threshold"   value="0.5"/>
+    <param name="green_confirm_frames" value="3"/>
+    <param name="red_wait_timeout"     value="30.0"/>
+
+    <!-- 原地旋转扫描红绿灯 -->
+    <param name="tl_scan_angle"        value="30.0"/>   <!-- 左右各30度 -->
+    <param name="tl_scan_angular_vel"  value="0.3"/>    <!-- 扫描角速度 rad/s -->
+
+    <!-- 行人检测参数 -->
+    <param name="person_conf_threshold" value="0.15"/>
+
+    <!-- 模型切换 (按需加载, 卸载旧模型 → 加载新模型 ~3-8s) -->
+
+    <!-- 距离滤波 -->
+    <param name="angle_tolerance"        value="2.0"/>
+    <param name="distance_filter_window" value="5"/>
+
+    <!-- 相机内参 (与 usb_cam_calibration.yaml 标定值保持一致, fx/fy=550) -->
+    <param name="fx" value="550.0"/>
+    <param name="fy" value="550.0"/>
+    <param name="cx" value="320.0"/>
+    <param name="cy" value="240.0"/>
+  </node>
+
+</launch>

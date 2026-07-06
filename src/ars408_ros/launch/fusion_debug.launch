@@ -1,0 +1,39 @@
+<launch>
+  <!-- =================================================== -->
+  <!-- 雷达+YOLO融合行人检测 一键启动                        -->
+  <!-- 输出: /fusion/printpoint (带框+距离的图片)            -->
+  <!-- =================================================== -->
+
+  <!-- 1. CAN转ROS桥接 -->
+  <node name="socketcan_bridge" pkg="socketcan_bridge" type="socketcan_bridge_node" output="screen">
+    <param name="can_device" value="can0"/>
+  </node>
+
+  <!-- 2. ARS408雷达解析 -->
+  <node name="ars408_node" pkg="ars408_ros" type="ars408_node.py" output="screen"/>
+
+  <!-- 3. TF静态发布 (radar_link, camera_link) -->
+  <node name="tf_publisher" pkg="ars408_ros" type="tf_publisher.py" output="screen"/>
+
+  <!-- 4. USB摄像头 -->
+  <include file="$(find usb_cam)/launch/usb_cam-test.launch"/>
+
+  <!-- 5. YOLOv8行人检测 (已由 multi_nav_traffic 包提供) -->
+  <!-- <node name="yolo_detect" pkg="ars408_ros" type="yolo_detect.py" output="screen">
+    <param name="model_path" value="yolov8n.pt"/>
+    <param name="conf_threshold" value="0.3"/>
+    <env name="LD_PRELOAD" value="/usr/lib/aarch64-linux-gnu/libgomp.so.1"/>
+  </node> -->
+
+  <!-- 6. 雷达+YOLO融合 -->
+  <node name="fusion_node" pkg="ars408_ros" type="fusion_node.py" output="screen">
+    <param name="fx" value="550.0"/>
+    <param name="fy" value="550.0"/>
+    <param name="cx" value="320.0"/>
+    <param name="cy" value="240.0"/>
+    <param name="max_radar_dist" value="50.0"/>
+    <param name="association_threshold" value="150.0"/>
+    <param name="conf_threshold" value="0.3"/>
+  </node>
+
+</launch>

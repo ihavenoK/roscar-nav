@@ -1,0 +1,48 @@
+<launch>
+  <!-- =================================================== -->
+  <!-- 一键启动：雷达+视觉融合 全流程                         -->
+  <!-- 用法: roslaunch ars408_ros start_all.launch           -->
+  <!-- =================================================== -->
+
+  <param name="/use_sim_time" value="true" />
+
+  <!-- ========== TF发布 ========== -->
+  <node name="tf_publisher" pkg="ars408_ros" type="tf_publisher.py" output="screen" />
+
+  <!-- ========== ARS408 雷达解析 ========== -->
+  <node name="ars408_node" pkg="ars408_ros" type="ars408_node.py" output="screen" />
+
+  <!-- ========== YOLOv8 行人检测（已由 multi_nav_traffic 包提供） ========== -->
+  <!-- <node name="yolo_detect" pkg="ars408_ros" type="yolo_detect.py" output="screen">
+    <param name="model_path" value="yolov8n.pt" />
+    <param name="conf_threshold" value="0.5" />
+  </node> -->
+
+  <!-- ========== 数据融合 ========== -->
+  <node name="fusion_node" pkg="ars408_ros" type="fusion_node.py" output="screen">
+    <param name="fx" value="400.0" />
+    <param name="fy" value="400.0" />
+    <param name="cx" value="320.0" />
+    <param name="cy" value="240.0" />
+    <param name="max_radar_dist" value="50.0" />
+    <param name="association_threshold" value="150.0" />
+    <param name="max_jump_dist" value="3.0" />
+    <param name="max_time_diff" value="0.5" />
+    <param name="min_radar_speed" value="0.1" />
+    <param name="ema_alpha" value="0.45" />
+  </node>
+
+  <!-- ========== rosbag（只播CAN帧+图像，ars408_node/yolo实时生成数据） ========== -->
+  <!-- -d 30: 启动延迟30s让所有节点就绪 -->
+  <!-- -l: 循环播放，fusion_node会检测sim_time回跳并自动重置 -->
+  <!-- wait-for-subscribers: 等待订阅者就绪再播放，减少首帧丢数据 -->
+  <node name="rosbag_player" pkg="rosbag" type="play"
+        args="--clock -l -d 30 --bags $(find ars408_ros)/../../radar.bag --topics /received_messages /usb_cam/image_raw"
+        output="screen" required="false" />
+
+  <!-- ========== RViz ========== -->
+  <node name="rviz" pkg="rviz" type="rviz"
+        args="-d $(find ars408_ros)/config/fusion.rviz"
+        output="screen" required="false" />
+
+</launch>

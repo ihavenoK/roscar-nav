@@ -1,0 +1,23 @@
+<launch>
+  <!-- =================================================== -->
+  <!-- 一键启动：毫米波雷达调试                              -->
+  <!-- 用法: roslaunch ars408_ros radar_debug.launch         -->
+  <!-- 前提: CAN接口已配置 (sudo ip link set can0 up ...)    -->
+  <!-- =================================================== -->
+
+  <!-- 1. CAN转ROS桥接 -->
+  <node name="socketcan_bridge" pkg="socketcan_bridge" type="socketcan_bridge_node" output="screen">
+    <param name="can_device" value="can0"/>
+  </node>
+
+  <!-- 2. ARS408雷达解析 -->
+  <node name="ars408_node" pkg="ars408_ros" type="ars408_node.py" output="screen"/>
+
+  <!-- 3. TF静态发布 (radar_link, camera_link) -->
+  <node name="tf_publisher" pkg="ars408_ros" type="tf_publisher.py" output="screen"/>
+
+  <!-- 4. 实时打印雷达数据验证 -->
+  <node name="radar_monitor" pkg="ars408_ros" type="ars408_node.py" 
+        args="" output="screen" required="false" />
+
+</launch>

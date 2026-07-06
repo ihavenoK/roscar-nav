@@ -1,0 +1,15 @@
+<launch>
+  <!-- 相机内参标定（屏幕显示棋盘格方案） -->
+  <!-- 用法: 先在电脑屏幕上打开棋盘格图片，再用小车摄像头对着屏幕 -->
+  <!--       roslaunch start_roscar calibrate_camera.launch -->
+  <!-- 注: 方格大小是屏幕上棋盘格的实际方格边长（m），需要用尺子量 -->
+
+  <!-- 1. 启动 USB 摄像头（frame_id已修正为camera_link） -->
+  <include file="$(find usb_cam)/launch/usb_cam-test.launch" />
+
+  <!-- 2. 启动标定工具 -->
+  <!-- 方格大小需根据屏幕实际测量：例如24寸显示器约0.028m/格 -->
+  <node name="cameracalibrator" pkg="camera_calibration" type="cameracalibrator.py"
+        args="--size 8x6 --square 0.028 image:=/usb_cam/image_raw camera:=/usb_cam"
+        output="screen" />
+</launch>

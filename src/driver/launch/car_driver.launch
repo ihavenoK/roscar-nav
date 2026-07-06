@@ -1,0 +1,9 @@
+<launch>
+    <!-- 启动 driver_node 节点 -->
+    <!-- ★ C++ 驱动内部已做方向适配 (cmd_vel linear.x 取反发送, odom linear.x 取反发布) -->
+    <node pkg="driver" type="driver_node" name="car_driver" output="screen">
+        <param name="usart_port_name" value="/dev/car_driver_tty"/>
+        <param name="serial_baud_rate" value="115200"/>
+    </node>
+</launch>
+

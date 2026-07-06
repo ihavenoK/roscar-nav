@@ -1,0 +1,49 @@
+<launch>
+  <!-- ===================== -->
+  <!-- 1. 启动机器人底层 -->
+  <!-- ===================== -->
+  <include file="$(find start_roscar)/launch/start_roscar.launch" />
+
+  <!-- ===================== -->
+  <!-- 3. 地图服务器 -->
+  <!-- ===================== -->
+  <arg name="map_file" default="/home/gdut/map/my_map.yaml"/>
+  <node pkg="map_server" type="map_server" name="map_server_roscar" args="$(arg map_file)" output="screen"/>
+
+  <!-- ===================== -->
+  <!-- 4. AMCL 定位 -->
+  <!-- ===================== -->
+  <include file="$(find start_roscar)/launch/include/amcl.launch" />
+
+  <!-- ===================== -->
+  <!-- 5. move_base + Navigation -->
+  <!-- ===================== -->
+  <node pkg="move_base" type="move_base" name="move_base" output="screen">
+    <!-- ★ C++ 驱动内部已做方向适配, move_base 直接输出到 /cmd_vel 即可 -->
+    <!-- 全局参数 -->
+    <rosparam command="load" file="$(find start_roscar)/param/move_base_params.yaml"/>
+    <!-- 全局 costmap -->
+    <rosparam command="load" file="$(find start_roscar)/param/global_costmap_params.yaml"/>
+    <!-- 局部 costmap -->
+    <rosparam command="load" file="$(find start_roscar)/param/local_costmap_params.yaml"/>
+    <!-- costmap 通用参数 → local_costmap 命名空间 (obstacle_layer 需 observation_sources) -->
+    <rosparam command="load" file="$(find start_roscar)/param/costmap_common_params.yaml" ns="local_costmap"/>
+    <!-- 全局 costmap 只用静态地图，不加载动态观测源，否则全局规划器会被堵死 -->
+    <!-- footprint 提到根级，供 global_costmap 使用 -->  
+    <rosparam param="footprint" subst_value="True">[[-0.09, -0.185], [-0.09, 0.185], [0.4, 0.185], [0.4, -0.185]]</rosparam>
+    <!-- global_costmap 膨胀层参数（不受 observation_sources 影响，可以安全设置） -->
+    <rosparam param="global_costmap/inflation_layer/inflation_radius" subst_value="True">0.4</rosparam>
+    <rosparam param="global_costmap/inflation_layer/cost_scaling_factor" subst_value="True">1.5</rosparam>
+    <!-- Global Planner 参数 (GlobalPlanner 专用，切换到 NavfnROS 后不再使用) -->
+    <!-- <rosparam command="load" file="$(find start_roscar)/param/base_global_planner_param.yaml"/> -->
+    <!-- NavfnROS 参数: 允许穿越未知区域 -->
+    <param name="NavfnROS/allow_unknown" value="true"/>
+    <param name="NavfnROS/default_tolerance" value="0.2"/>
+    <!-- TEB Local Planner 参数 -->
+    <rosparam command="load" file="$(find start_roscar)/param/teb_local_planner_params.yaml"/>
+    <!-- TF 容忍时间（5.0: 彻底覆盖 plan 时间戳的微小外推） -->
+    <param name="transform_tolerance" value="5.0"/>
+    <param name="use_sim_time" value="false"/>
+  </node>
+
+</launch>

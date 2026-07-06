@@ -1,0 +1,53 @@
+<launch>
+
+    <!-- 使用map的topic而不是map文件-->
+    <arg name="use_map_topic" default="false"/>
+    <!-- 不可以使用PointCloud，只能使用LaserScan -->
+    <arg name="scan_topic" default="scan"/>
+    <arg name="map_topic"  default="/map"/>
+
+    <node pkg="amcl" type="amcl" name="amcl" clear_params="true">
+      <param name="use_map_topic" value="$(arg use_map_topic)"/>
+      <!-- 使用rtabmap分布的Map，连接TF树 -->
+      <remap from="/map" to="/$(arg map_topic)"/>
+      <!-- Publish scans from best pose at a max of 10 Hz -->
+      <!-- 差速小车使用 diff-corrected，全向轮用 omni-corrected -->
+      <!-- <param name="odom_model_type" value="omni-corrected"/> -->
+      <param name="odom_model_type" value="diff-corrected"/>
+      <!-- <param name="odom_model_type" value="omnid"/> -->
+      <!-- <param name="odom_model_type" value="diff"/> -->
+      <param name="odom_alpha5" value="0.1"/>
+      <param name="gui_publish_rate" value="5.0"/>
+      <param name="laser_max_beams" value="120"/>
+      <param name="laser_max_range" value="5.0"/>
+      <param name="min_particles" value="800"/>
+      <param name="max_particles" value="3000"/>
+      <param name="kld_err" value="0.05"/>
+      <param name="kld_z" value="0.99"/>
+      <!-- 里程计噪声模型：适度增加旋转噪声，让AMCL更多依赖激光纠正 -->
+      <param name="odom_alpha1" value="0.2"/>
+      <param name="odom_alpha2" value="0.15"/>
+      <!-- translation std dev, m -->
+      <param name="odom_alpha3" value="0.1"/>
+      <param name="odom_alpha4" value="0.1"/>
+      <param name="laser_z_hit" value="0.92"/>
+      <param name="laser_z_short" value="0.02"/>
+      <param name="laser_z_max" value="0.02"/>
+      <param name="laser_z_rand" value="0.02"/>
+      <param name="laser_sigma_hit" value="0.08"/>
+      <param name="laser_lambda_short" value="0.1"/>
+      <param name="laser_model_type" value="likelihood_field"/>
+      <!-- <param name="laser_model_type" value="beam"/> -->
+      <param name="laser_likelihood_max_dist" value="0.5"/>
+      <param name="update_min_d" value="0.1"/>
+      <param name="update_min_a" value="0.1"/>
+      <param name="odom_frame_id" value="odom_combined"/>
+      <param name="resample_interval" value="2"/>
+      <!-- CAN总线TF可能有0.5s+延迟，与move_base/costmap一致放宽tolerance -->
+      <param name="transform_tolerance" value="0.5"/>
+      <!-- 随机粒子注入：纠正一圈后的累积漂移 -->
+      <param name="recovery_alpha_slow" value="0.001"/>
+      <param name="recovery_alpha_fast" value="0.05"/>
+      <remap from="scan" to="$(arg scan_topic)"/>
+    </node>
+</launch>

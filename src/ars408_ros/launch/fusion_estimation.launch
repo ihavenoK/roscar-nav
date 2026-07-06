@@ -1,0 +1,54 @@
+<launch>
+  <!-- =================================================== -->
+  <!-- 毫米波雷达与视觉融合估计 启动文件                      -->
+  <!-- =================================================== -->
+
+  <!-- ⚠️ 关键：使用模拟时间（时间戳来源 bag 的 /clock） -->
+  <param name="/use_sim_time" value="true" />
+
+  <!-- 播放rosbag数据（循环模式，需要手动启动或取消注释） -->
+  <!-- <node name="rosbag_player" pkg="rosbag" type="play"
+        args="-l $(find ars408_ros)/../../radar.bag" output="screen"/> -->
+
+  <!-- ========== TF发布节点（静态坐标变换） ========== -->
+  <node name="tf_publisher" pkg="ars408_ros" type="tf_publisher.py"
+        output="screen" />
+
+  <!-- ========== ARS408毫米波雷达解析节点 ========== -->
+  <node name="ars408_node" pkg="ars408_ros" type="ars408_node.py"
+        output="screen" />
+
+  <!-- ========== YOLOv8行人检测（已由 multi_nav_traffic 包提供） ========== -->
+  <!-- <node name="yolo_detect" pkg="ars408_ros" type="yolo_detect.py"
+        output="screen">
+    <param name="model_path" value="yolov8n.pt" />
+    <param name="conf_threshold" value="0.5" />
+  </node> -->
+
+  <!-- ========== 数据融合与轨迹绘制节点 ========== -->
+  <node name="fusion_node" pkg="ars408_ros" type="fusion_node.py"
+        output="screen">
+    <!-- 相机内参矩阵 -->
+    <param name="fx" value="400.0" />
+    <param name="fy" value="400.0" />
+    <param name="cx" value="320.0" />
+    <param name="cy" value="240.0" />
+    <!-- 雷达最大检测距离(m) -->
+    <param name="max_radar_dist" value="50.0" />
+    <!-- bbox关联像素阈值 -->
+    <param name="association_threshold" value="150.0" />
+    <!-- 时间同步容差(秒) -->
+    <param name="max_time_diff" value="0.5" />
+    <!-- 最小多普勒速度阈值(m/s) -->
+    <param name="min_radar_speed" value="0.3" />
+    <!-- EMA平滑系数(0~1) -->
+    <param name="ema_alpha" value="0.45" />
+  </node>
+
+  <!-- ========== Rviz可视化 ========== -->
+  <!-- 手动启动: rviz，加载以下配置 -->
+  <!--
+  <node name="rviz" pkg="rviz" type="rviz"
+        args="-d $(find ars408_ros)/config/fusion.rviz" />
+  -->
+</launch>
